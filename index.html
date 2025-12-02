@@ -128,14 +128,12 @@ tr:nth-child(even) { background-color: #f4f9ff; }
 <h1>SES Policy Validator 2 (Policy Manager)</h1>
 
 <div class="container">
-  <!-- Policy Received by Mail -->
   <div class="input-box" id="box1">
     <h3>Policy Received by Mail 📩</h3>
     <textarea id="data1" placeholder="Paste vertical data here..."></textarea>
     <button onclick="convertToProcedure1(1)">Convert to Table</button>
   </div>
 
-  <!-- Updated CDN Policy Manager -->
   <div class="input-box" id="box2">
     <h3>Updated CDN Policy Manager 📤</h3>
     <textarea id="data2" placeholder="Paste vertical or tab-separated policy here..."></textarea>
@@ -156,10 +154,12 @@ tr:nth-child(even) { background-color: #f4f9ff; }
 let tableData1 = [];
 let tableData2 = [];
 
-// ------------------- (Existing Box 1 and 2 Code Unchanged) -------------------
-
+/* =======================================================================
+   UPDATED applyProcedure1 WITH ONLY YOUR REQUIRED ADDITION
+   ======================================================================= */
 function applyProcedure1(resources) {
   resources = resources.filter(Boolean);
+
   const clean = [];
   for (const res of resources) {
     if (res.startsWith("A")) {
@@ -171,15 +171,33 @@ function applyProcedure1(resources) {
   resources = clean;
 
   resources = resources.map(res => {
-    const parts = res.split("-");
-    if (parts.length >= 3) return `dc${parts[1].toLowerCase()}-${parts[0].toLowerCase()}-live`;
+    let parts = res.split("-");
+
+    /* 🔥 NEW RULE: Merge last segment (IT) into first segment */
+    if (parts.length >= 4) {
+      const last = parts[parts.length - 1];
+      if (/^[A-Za-z]{2}$/.test(last)) {
+        parts[0] = parts[0] + last;  
+        parts.pop();
+      }
+    }
+
+    /* ORIGINAL RULE UNTOUCHED */
+    if (parts.length >= 3) {
+      return `dc${parts[1].toLowerCase()}-${parts[0].toLowerCase()}-live`;
+    }
     return res.toLowerCase();
   });
 
   if (resources.length >= 1) resources[0] = "a-" + resources[0];
   if (resources.length >= 2) resources[1] = "a-" + resources[1];
+
   return resources;
 }
+
+/* --------------------------------------------------------------------- */
+/* REST OF THE CODE (UNCHANGED)                                          */
+/* --------------------------------------------------------------------- */
 
 function convertToProcedure1(boxNum) {
   const textarea = document.getElementById("data" + boxNum);
@@ -201,13 +219,18 @@ function convertToProcedure1(boxNum) {
 
   let i = 0;
   const dataRows = [];
+
   while (i < lines.length) {
     let percent = lines[i];
     if (!/^\d+(\.\d+)?%?$/.test(percent)) { i++; continue; }
     percent = percent.endsWith("%") ? percent : percent + "%";
     i++;
+
     const resources = [];
-    while (i < lines.length && !/^\d+(\.\d+)?%?$/.test(lines[i])) resources.push(lines[i++]);
+    while (i < lines.length && !/^\d+(\.\d+)?%?$/.test(lines[i])) {
+      resources.push(lines[i++]);
+    }
+
     const procResources = applyProcedure1(resources);
     const tr = document.createElement("tr");
     tr.innerHTML = `<td>${percent}</td><td>${procResources.join(", ")}</td>`;
@@ -298,8 +321,6 @@ function convertToConvivaTable() {
   controls.append(editBtn, clearBtn, copyBtn);
   box.appendChild(controls);
 }
-
-// ------------------- Compare Tables (Updated Section) -------------------
 
 function normalize(value, treatCFAC = false) {
   let v = (value || "").toString().trim().replace(/\s+/g, " ").toLowerCase();
